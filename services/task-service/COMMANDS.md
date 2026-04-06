@@ -7,91 +7,75 @@ CLI service for managing tasks in SQLite database.
 
 ## Commands
 
-### 1. List tasks
-
+### List tasks
 ```bash
 node services/task-service/index.js list
-```
-
-#### JSON mode
-```bash
 node services/task-service/index.js list --json
 ```
 
-#### Expected behavior
-- Returns all tasks ordered by `id ASC`
-- In text mode, prints a readable task list
-- In json mode, returns:
-
-```json
-{
-  "success": true,
-  "tasks": []
-}
+### Get one task
+```bash
+node services/task-service/index.js get <id>
+node services/task-service/index.js get <id> --json
 ```
 
----
-
-### 2. Create task
-
+### Create reminder task
 ```bash
 node services/task-service/index.js create "title" "description" 3 "2026-04-05 20:00:00"
+node services/task-service/index.js create-reminder "title" "description" 3 "2026-04-05 20:00:00"
 ```
 
-#### JSON mode
+Notes:
+- `create` and `create-reminder` currently behave the same
+- default task type = `reminder`
+
+### Create time block task
 ```bash
-node services/task-service/index.js create "title" "description" 3 "2026-04-05 20:00:00" --json
+node services/task-service/index.js create-time-block "title" "description" 3 "2026-04-05 20:00:00" 60
 ```
 
-#### Arguments
-1. `title` (required)
-2. `description` (optional, default: empty string)
-3. `priority` (optional, default: 3)
-4. `dueAt` (optional, default: null)
+Arguments:
+1. `title`
+2. `description`
+3. `priority`
+4. `dueAt`
+5. `estimatedMinutes`
 
-#### Expected behavior
-- Creates a task with status = `inbox`
-- In text mode, returns success message
-- In json mode, returns:
+Default task type = `time_block`
 
-```json
-{
-  "success": true,
-  "message": "Task created successfully",
-  "taskId": 1
-}
+### Complete task
+```bash
+node services/task-service/index.js complete <id>
+node services/task-service/index.js complete <id> --json
 ```
+
+### Update task status
+```bash
+node services/task-service/index.js update-status <id> <status>
+node services/task-service/index.js update-status <id> <status> --json
+```
+
+Allowed statuses:
+- `inbox`
+- `in_progress`
+- `done`
+- `cancelled`
 
 ---
 
-## Error behavior
+## Key fields in schema v2
 
-### Missing title
-
-Example:
-```bash
-node services/task-service/index.js create --json
-```
-
-Returns:
-
-```json
-{
-  "success": false,
-  "error": "Missing title. Usage: ..."
-}
-```
-
----
-
-### Unknown command
-
-Returns error in text or json mode depending on flag.
+- `task_type`
+- `estimated_minutes`
+- `actual_minutes`
+- `scheduled_start`
+- `scheduled_end`
+- `source`
 
 ---
 
 ## Notes
 
-- `--json` is treated as an option, not task data
-- Current supported commands: `list`, `create`
-- Database: `db/app.db`
+- JSON mode is preferred for integrations
+- `create-v2` is transitional and may be removed later
+- Backend/service logic should live outside CLI parsing where possible

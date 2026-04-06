@@ -1,0 +1,6 @@
+node_modules
+services/task-service/node_modules
+db/app.db
+.git
+.gitignore
+npm-debug.log

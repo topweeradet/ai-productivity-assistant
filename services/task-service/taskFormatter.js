@@ -18,7 +18,7 @@ function formatTaskList(rows, outputMode = "text") {
 
   rows.forEach((task) => {
     lines.push(
-      `- [${task.id}] ${task.title} | status=${task.status} | priority=${task.priority} | due=${task.due_at || "none"}`
+      `- [${task.id}] ${task.title} | status=${task.status} | type=${task.task_type || "reminder"} | priority=${task.priority} | due=${task.due_at || "none"}`
     );
   });
 
@@ -75,18 +75,26 @@ function formatSingleTask(task, outputMode = "text") {
   return `Task:
 - id: ${task.id}
 - title: ${task.title}
+- description: ${task.description || ""}
 - status: ${task.status}
+- task_type: ${task.task_type || "reminder"}
 - priority: ${task.priority}
-- due: ${task.due_at || "none"}`;
+- due: ${task.due_at || "none"}
+- estimated_minutes: ${task.estimated_minutes ?? "none"}
+- actual_minutes: ${task.actual_minutes ?? "none"}
+- source: ${task.source || "manual"}
+- scheduled_start: ${task.scheduled_start || "none"}
+- scheduled_end: ${task.scheduled_end || "none"}`;
 }
 
-function formatTaskCompleted(taskId, changes, outputMode = "text") {
+function formatTaskCompleted(taskId, changes, actualMinutes, outputMode = "text") {
   if (outputMode === "json") {
     return JSON.stringify(
       {
         success: changes > 0,
         message: changes > 0 ? "Task completed successfully" : "Task not found",
         taskId,
+        actualMinutes,
       },
       null,
       2
@@ -95,6 +103,10 @@ function formatTaskCompleted(taskId, changes, outputMode = "text") {
 
   if (changes === 0) {
     return "Task not found.";
+  }
+
+  if (actualMinutes !== null && actualMinutes !== undefined) {
+    return `Task completed successfully (id: ${taskId}, actual_minutes: ${actualMinutes})`;
   }
 
   return `Task completed successfully (id: ${taskId})`;

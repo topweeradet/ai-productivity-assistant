@@ -3,12 +3,16 @@ const {
     initializeDatabase
 } = require("./db");
 const {
-    createTask,
     listTasks,
     getTaskById,
     completeTask,
     updateTaskStatus,
 } = require("./taskRepository");
+const {
+    createReminderTask,
+    createTimeBlockTask,
+    createSmartTask,
+} = require("./taskService");
 const {
     formatTaskList,
     formatTaskCreated,
@@ -42,13 +46,10 @@ function runCommand() {
         return;
     }
 
-    if (command === "create") {
-        const title = args[1];
-        const description = args[2] || "";
-        const priority = Number(args[3] || 3);
-        const dueAt = args[4] || null;
+    if (command === "create" || command === "create-reminder") {
+        const taskInput = parseBasicCreateArgs(args);
 
-        if (!title) {
+        if (!taskInput.title) {
             console.log(
                 formatError(
                     'Missing title. Usage: node services/task-service/index.js create "title" "description" 3 "2026-04-05 20:00:00"',
@@ -59,7 +60,58 @@ function runCommand() {
             return;
         }
 
-        handleCreateTask(title, description, "inbox", priority, dueAt, outputMode);
+        handleCreateReminderTask(
+            {
+                ...taskInput,
+                status: "inbox",
+                task_type: "reminder", // default
+                estimated_minutes: null,
+                source: "manual",
+            },
+            outputMode
+        );
+        return;
+    }
+
+    if (command === "create-time-block") {
+        const taskInput = parseTimeBlockCreateArgs(args);
+
+        if (!taskInput.title) {
+            console.log(
+                formatError(
+                    'Missing title. Usage: node services/task-service/index.js create-time-block "title" "description" 3 "2026-04-05 20:00:00" 60',
+                    outputMode
+                )
+            );
+            db.close();
+            return;
+        }
+
+        handleCreateTimeBlockTask(
+            {
+                ...taskInput,
+                source: "manual",
+            },
+            outputMode
+        );
+        return;
+    }
+
+    if (command === "smart-create") {
+        const taskInput = parseSmartCreateArgs(args);
+
+        if (!taskInput.title) {
+            console.log(
+                formatError(
+                    'Missing title. Usage: node services/task-service/index.js smart-create "title" "description" 3 "2026-04-05 20:00:00" [estimatedMinutes]',
+                    outputMode
+                )
+            );
+            db.close();
+            return;
+        }
+
+        handleCreateSmartTask(taskInput, outputMode);
         return;
     }
 
@@ -80,16 +132,20 @@ function runCommand() {
 
     if (command === "complete") {
         const id = Number(args[1]);
+        const actualMinutes = args[2] ? Number(args[2]) : null;
 
         if (!id) {
             console.log(
-                formatError("Missing or invalid task id. Usage: complete <id>", outputMode)
+                formatError(
+                    "Missing or invalid task id. Usage: complete <id> [actualMinutes]",
+                    outputMode
+                )
             );
             db.close();
             return;
         }
 
-        handleCompleteTask(id, outputMode);
+        handleCompleteTask(id, actualMinutes, outputMode);
         return;
     }
 
@@ -116,16 +172,53 @@ function runCommand() {
     db.close();
 }
 
-function handleCreateTask(title, description, status, priority, dueAt, outputMode) {
-    createTask(title, description, status, priority, dueAt, (err, taskId) => {
-        if (err) {
-            console.log(formatError(`Failed to create task: ${err.message}`, outputMode));
-            db.close();
-            return;
-        }
+function parseBasicCreateArgs(args) {
+    return {
+        title: args[1],
+        description: args[2] || "",
+        priority: Number(args[3] || 3),
+        due_at: args[4] || null,
+    };
+}
 
-        console.log(formatTaskCreated(taskId, outputMode));
-        db.close();
+function parseTimeBlockCreateArgs(args) {
+    return {
+        title: args[1],
+        description: args[2] || "",
+        priority: Number(args[3] || 3),
+        due_at: args[4] || null,
+        estimated_minutes: args[5] ? Number(args[5]) : null,
+        scheduled_start: args[6] || null,
+        scheduled_end: args[7] || null,
+    };
+}
+
+function parseSmartCreateArgs(args) {
+    return {
+        title: args[1],
+        description: args[2] || "",
+        priority: Number(args[3] || 3),
+        due_at: args[4] || null,
+        estimated_minutes: args[5] ? Number(args[5]) : null,
+        source: "manual",
+    };
+}
+
+function handleCreateReminderTask(taskData, outputMode) {
+    createReminderTask(taskData, (err, taskId) => {
+        handleCreateResult(err, taskId, outputMode);
+    });
+}
+
+function handleCreateTimeBlockTask(taskData, outputMode) {
+    createTimeBlockTask(taskData, (err, taskId) => {
+        handleCreateResult(err, taskId, outputMode);
+    });
+}
+
+function handleCreateSmartTask(taskData, outputMode) {
+    createSmartTask(taskData, (err, taskId) => {
+        handleCreateResult(err, taskId, outputMode);
     });
 }
 
@@ -155,15 +248,15 @@ function handleGetTask(id, outputMode) {
     });
 }
 
-function handleCompleteTask(id, outputMode) {
-    completeTask(id, (err, changes) => {
+function handleCompleteTask(id, actualMinutes, outputMode) {
+    completeTask(id, actualMinutes, (err, changes) => {
         if (err) {
             console.log(formatError(`Failed to complete task: ${err.message}`, outputMode));
             db.close();
             return;
         }
 
-        console.log(formatTaskCompleted(id, changes, outputMode));
+        console.log(formatTaskCompleted(id, changes, actualMinutes, outputMode));
         db.close();
     });
 }
@@ -181,4 +274,15 @@ function handleUpdateTaskStatus(id, status, outputMode) {
         console.log(formatTaskStatusUpdated(id, status, changes, outputMode));
         db.close();
     });
+}
+
+function handleCreateResult(err, taskId, outputMode) {
+    if (err) {
+        console.log(formatError(`Failed to create task: ${err.message}`, outputMode));
+        db.close();
+        return;
+    }
+
+    console.log(formatTaskCreated(taskId, outputMode));
+    db.close();
 }

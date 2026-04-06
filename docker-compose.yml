@@ -1,0 +1,9 @@
+services:
+  api:
+    build: .
+    container_name: ai-productivity-assistant-api
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./db:/app/db
+    restart: unless-stopped

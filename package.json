@@ -1,0 +1,20 @@
+{
+  "name": "ai-productivity-assistant",
+  "version": "1.0.0",
+  "description": "Personal AI assistant for task management and time blocking.",
+  "main": "services/api/server.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node services/api/server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}

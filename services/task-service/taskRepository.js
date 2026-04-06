@@ -16,15 +16,74 @@ function createTask(title, description, status, priority, dueAt, callback) {
   });
 }
 
-function listTasks(callback) {
-  db.all("SELECT * FROM tasks ORDER BY id ASC;", [], (queryErr, rows) => {
-    if (queryErr) {
-      callback(queryErr);
-      return;
-    }
+function createTaskV2(taskData, callback) {
+  const {
+    title,
+    description = "",
+    status = "inbox",
+    task_type = "reminder",
+    priority = 3,
+    due_at = null,
+    estimated_minutes = null,
+    source = "manual",
+    scheduled_start = null,
+    scheduled_end = null,
+  } = taskData;
 
-    callback(null, rows);
-  });
+  const sql = `
+    INSERT INTO tasks (
+      title,
+      description,
+      status,
+      task_type,
+      priority,
+      due_at,
+      estimated_minutes,
+      source,
+      scheduled_start,
+      scheduled_end
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `;
+
+  db.run(
+    sql,
+    [
+      title,
+      description,
+      status,
+      task_type,
+      priority,
+      due_at,
+      estimated_minutes,
+      source,
+      scheduled_start,
+      scheduled_end,
+    ],
+    function (err) {
+      if (err) {
+        callback(err);
+        return;
+      }
+
+      callback(null, this.lastID);
+    }
+  );
+}
+
+function listTasks(callback) {
+  db.all(
+    "SELECT id, title, status, task_type, priority, due_at FROM tasks ORDER BY id ASC;",
+    [],
+    (queryErr, rows) => {
+      if (queryErr) {
+        callback(queryErr);
+        return;
+      }
+
+      callback(null, rows);
+    }
+  );
 }
 
 function getTaskById(id, callback) {
@@ -40,8 +99,23 @@ function getTaskById(id, callback) {
   });
 }
 
-function completeTask(id, callback) {
-  updateTaskStatus(id, "done", callback);
+function completeTask(id, actualMinutes, callback) {
+  const sql = `
+    UPDATE tasks
+    SET status = 'done',
+        actual_minutes = ?,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `;
+
+  db.run(sql, [actualMinutes, id], function (err) {
+    if (err) {
+      callback(err);
+      return;
+    }
+
+    callback(null, this.changes);
+  });
 }
 
 function updateTaskStatus(id, status, callback) {
@@ -64,6 +138,7 @@ function updateTaskStatus(id, status, callback) {
 
 module.exports = {
   createTask,
+  createTaskV2,
   listTasks,
   getTaskById,
   completeTask,
