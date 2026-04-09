@@ -1,7 +1,7 @@
 const express = require("express");
 const { initializeDatabase } = require("../task-service/db");
 const { createSmartTask } = require("../task-service/taskService");
-const { listTasks, getTaskById, getTasksForArtifactSync, completeTask, archiveTask } = require("../task-service/taskRepository");
+const { listTasks, getTaskById, getTasksForArtifactSync, completeTask, patchTask, archiveTask } = require("../task-service/taskRepository");
 
 const app = express();
 const PORT = 3000;
@@ -133,6 +133,30 @@ initializeDatabase((initErr) => {
                 });
             }
         );
+    });
+
+    app.patch("/tasks/:id", (req, res) => {
+        const id = Number(req.params.id);
+
+        if (!id) {
+            return res.status(400).json({ success: false, error: "Invalid task id" });
+        }
+
+        if (!req.body || Object.keys(req.body).length === 0) {
+            return res.status(400).json({ success: false, error: "No fields provided" });
+        }
+
+        patchTask(id, req.body, (err, changes) => {
+            if (err) {
+                return res.status(400).json({ success: false, error: err.message });
+            }
+
+            if (changes === 0) {
+                return res.status(404).json({ success: false, error: "Task not found" });
+            }
+
+            return res.json({ success: true, message: "Task updated", taskId: id });
+        });
     });
 
     app.post("/tasks/:id/complete", (req, res) => {

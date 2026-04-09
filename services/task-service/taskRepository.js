@@ -149,6 +149,39 @@ function updateTaskStatus(id, status, callback) {
   });
 }
 
+// Patch arbitrary fields on a task (whitelist enforced)
+const PATCHABLE_FIELDS = [
+  "title", "description", "status", "task_type", "priority",
+  "due_at", "estimated_minutes", "scheduled_start", "scheduled_end",
+  "is_recurring", "recur_pattern", "calendar_event_id", "actual_minutes",
+];
+
+function patchTask(id, fields, callback) {
+  const allowed = Object.keys(fields).filter((k) => PATCHABLE_FIELDS.includes(k));
+
+  if (allowed.length === 0) {
+    return callback(new Error("No valid fields to update"));
+  }
+
+  const setClauses = allowed.map((k) => `${k} = ?`).join(", ");
+  const values = allowed.map((k) => fields[k]);
+
+  const sql = `
+    UPDATE tasks
+    SET ${setClauses}, updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `;
+
+  db.run(sql, [...values, id], function (err) {
+    if (err) {
+      callback(err);
+      return;
+    }
+
+    callback(null, this.changes);
+  });
+}
+
 function archiveTask(id, callback) {
   const sql = `
     UPDATE tasks
@@ -174,5 +207,6 @@ module.exports = {
   getTasksForArtifactSync,
   completeTask,
   updateTaskStatus,
+  patchTask,
   archiveTask,
 };

@@ -94,6 +94,20 @@ function createServer() {
         }
     );
 
+    server.tool(
+        "patch_task",
+        "Update specific fields of a task. Use this to set calendar_event_id after creating a Calendar event, or to update any other task field.",
+        {
+            id: z.number().int().positive().describe("Task ID"),
+            fields: z.record(z.unknown()).describe("Fields to update (e.g. { calendar_event_id: 'abc123' })"),
+        },
+        async ({ id, fields }) => {
+            const data = await apiRequest("PATCH", `/tasks/${id}`, fields);
+            if (!data.success) throw new Error(data.error);
+            return { content: [{ type: "text", text: `Task ${id} updated` }] };
+        }
+    );
+
     return server;
 }
 
