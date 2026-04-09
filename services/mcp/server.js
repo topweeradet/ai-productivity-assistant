@@ -1,10 +1,11 @@
 const { McpServer } = require("@modelcontextprotocol/sdk/server/mcp.js");
+const { StdioServerTransport } = require("@modelcontextprotocol/sdk/server/stdio.js");
 const { SSEServerTransport } = require("@modelcontextprotocol/sdk/server/sse.js");
 const { createMcpExpressApp } = require("@modelcontextprotocol/sdk/server/express.js");
 const { z } = require("zod");
 
 const API_BASE = process.env.TASK_API_URL || "http://localhost:3000";
-const PORT = process.env.MCP_PORT || 3001;
+const MCP_PORT = process.env.MCP_PORT;  // if set → SSE mode, otherwise → stdio
 
 async function apiRequest(method, path, body) {
     const options = { method, headers: { "Content-Type": "application/json" } };
@@ -96,33 +97,35 @@ function createServer() {
     return server;
 }
 
-const app = createMcpExpressApp({ enforceHostHeader: false });
-const transports = {};
+async function startStdio() {
+    const transport = new StdioServerTransport();
+    await createServer().connect(transport);
+}
 
-app.get("/mcp", async (req, res) => {
-    const transport = new SSEServerTransport("/messages", res);
-    transports[transport.sessionId] = transport;
-    transport.onclose = () => delete transports[transport.sessionId];
+function startSSE(port) {
+    const app = createMcpExpressApp({ enforceHostHeader: false });
+    const transports = {};
 
-    const server = createServer();
-    await server.connect(transport);
-});
+    app.get("/mcp", async (req, res) => {
+        const transport = new SSEServerTransport("/messages", res);
+        transports[transport.sessionId] = transport;
+        transport.onclose = () => delete transports[transport.sessionId];
+        await createServer().connect(transport);
+    });
 
-app.post("/messages", async (req, res) => {
-    const sessionId = req.query.sessionId;
-    const transport = transports[sessionId];
+    app.post("/messages", async (req, res) => {
+        const transport = transports[req.query.sessionId];
+        if (!transport) { res.status(404).send("Session not found"); return; }
+        await transport.handlePostMessage(req, res, req.body);
+    });
 
-    if (!transport) {
-        res.status(404).send("Session not found");
-        return;
-    }
+    app.listen(port, () => {
+        console.log(`MCP server (SSE) on http://localhost:${port}/mcp — API: ${API_BASE}`);
+    });
+}
 
-    await transport.handlePostMessage(req, res, req.body);
-});
-
-app.listen(PORT, () => {
-    console.log(`MCP server (SSE) running on http://localhost:${PORT}`);
-    console.log(`  SSE endpoint:  GET  http://localhost:${PORT}/mcp`);
-    console.log(`  Post endpoint: POST http://localhost:${PORT}/messages`);
-    console.log(`  API base:      ${API_BASE}`);
-});
+if (MCP_PORT) {
+    startSSE(Number(MCP_PORT));
+} else {
+    startStdio().catch((err) => { console.error(err); process.exit(1); });
+}
