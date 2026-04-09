@@ -5,3 +5,4 @@ db/app.db
 npm-debug.log
 .claude
 docs
+secret
