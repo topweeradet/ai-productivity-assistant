@@ -1,21 +1,5 @@
 const { db } = require("./db");
 
-function createTask(title, description, status, priority, dueAt, callback) {
-  const sql = `
-    INSERT INTO tasks (title, description, status, priority, due_at)
-    VALUES (?, ?, ?, ?, ?)
-  `;
-
-  db.run(sql, [title, description, status, priority, dueAt], function (insertErr) {
-    if (insertErr) {
-      callback(insertErr);
-      return;
-    }
-
-    callback(null, this.lastID);
-  });
-}
-
 function createTaskV2(taskData, callback) {
   const {
     title,
@@ -118,6 +102,35 @@ function completeTask(id, actualMinutes, callback) {
   });
 }
 
+// Returns tasks relevant for artifact sync:
+// - not complete, due within past 3 days or future 7 days
+// - OR recurring (regardless of due date) to prevent duplicate creation
+function getTasksForArtifactSync(callback) {
+  const sql = `
+    SELECT *
+    FROM tasks
+    WHERE status NOT IN ('done', 'archived')
+      AND (
+        is_recurring = 1
+        OR due_at IS NULL
+        OR (
+          due_at >= datetime('now', '-3 days')
+          AND due_at <= datetime('now', '+7 days')
+        )
+      )
+    ORDER BY due_at ASC, priority DESC
+  `;
+
+  db.all(sql, [], (err, rows) => {
+    if (err) {
+      callback(err);
+      return;
+    }
+
+    callback(null, rows);
+  });
+}
+
 function updateTaskStatus(id, status, callback) {
   const sql = `
     UPDATE tasks
@@ -136,11 +149,30 @@ function updateTaskStatus(id, status, callback) {
   });
 }
 
+function archiveTask(id, callback) {
+  const sql = `
+    UPDATE tasks
+    SET status = 'archived',
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `;
+
+  db.run(sql, [id], function (err) {
+    if (err) {
+      callback(err);
+      return;
+    }
+
+    callback(null, this.changes);
+  });
+}
+
 module.exports = {
-  createTask,
   createTaskV2,
   listTasks,
   getTaskById,
+  getTasksForArtifactSync,
   completeTask,
   updateTaskStatus,
+  archiveTask,
 };

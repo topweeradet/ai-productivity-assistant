@@ -1,7 +1,7 @@
 const express = require("express");
 const { initializeDatabase } = require("../task-service/db");
 const { createSmartTask } = require("../task-service/taskService");
-const { listTasks, getTaskById, completeTask } = require("../task-service/taskRepository");
+const { listTasks, getTaskById, getTasksForArtifactSync, completeTask, archiveTask } = require("../task-service/taskRepository");
 
 const app = express();
 const PORT = 3000;
@@ -37,6 +37,16 @@ initializeDatabase((initErr) => {
         });
     });
 
+    app.get("/tasks/for-sync", (req, res) => {
+        getTasksForArtifactSync((err, rows) => {
+            if (err) {
+                return res.status(500).json({ success: false, error: err.message });
+            }
+
+            return res.json({ success: true, tasks: rows });
+        });
+    });
+
     app.get("/tasks/:id", (req, res) => {
         const id = Number(req.params.id);
 
@@ -66,6 +76,26 @@ initializeDatabase((initErr) => {
                 success: true,
                 task,
             });
+        });
+    });
+
+    app.post("/tasks/:id/archive", (req, res) => {
+        const id = Number(req.params.id);
+
+        if (!id) {
+            return res.status(400).json({ success: false, error: "Invalid task id" });
+        }
+
+        archiveTask(id, (err, changes) => {
+            if (err) {
+                return res.status(500).json({ success: false, error: err.message });
+            }
+
+            if (changes === 0) {
+                return res.status(404).json({ success: false, error: "Task not found" });
+            }
+
+            return res.json({ success: true, message: "Task archived", taskId: id });
         });
     });
 
