@@ -21,6 +21,10 @@ CREATE TABLE IF NOT EXISTS tasks (
   -- learning
   actual_minutes INTEGER,
 
+  -- recurring
+  is_recurring INTEGER NOT NULL DEFAULT 0,  -- 0 | 1
+  recur_pattern TEXT,                        -- daily | weekly | monthly
+
   -- metadata
   source TEXT DEFAULT 'manual',
 

@@ -30,6 +30,19 @@ server.tool(
 );
 
 server.tool(
+    "get_tasks_for_sync",
+    "Get tasks for artifact sync: non-complete tasks due in the past 3 days or next 7 days, plus all recurring tasks. Use this instead of list_tasks when building or refreshing the Claude task artifact.",
+    {},
+    async () => {
+        const data = await apiRequest("GET", "/tasks/for-sync");
+        if (!data.success) throw new Error(data.error);
+        return {
+            content: [{ type: "text", text: JSON.stringify(data.tasks, null, 2) }],
+        };
+    }
+);
+
+server.tool(
     "get_task",
     "Get full details of a specific task by its numeric ID.",
     { id: z.number().int().positive().describe("Task ID") },
@@ -82,6 +95,19 @@ server.tool(
         if (!data.success) throw new Error(data.error);
         return {
             content: [{ type: "text", text: `Task ${id} marked complete` + (actual_minutes != null ? ` (${actual_minutes} min)` : "") }],
+        };
+    }
+);
+
+server.tool(
+    "archive_task",
+    "Archive a task (e.g. duplicate or cancelled). Archived tasks are excluded from artifact sync and daily focus.",
+    { id: z.number().int().positive().describe("Task ID") },
+    async ({ id }) => {
+        const data = await apiRequest("POST", `/tasks/${id}/archive`);
+        if (!data.success) throw new Error(data.error);
+        return {
+            content: [{ type: "text", text: `Task ${id} archived` }],
         };
     }
 );

@@ -14,6 +14,27 @@ const db = new sqlite3.Database(dbPath, (err) => {
   console.log("Connected to SQLite database");
 });
 
+const MIGRATIONS = [
+  `ALTER TABLE tasks ADD COLUMN is_recurring INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE tasks ADD COLUMN recur_pattern TEXT`,
+];
+
+function runMigrations(callback) {
+  let pending = MIGRATIONS.length;
+  if (pending === 0) return callback(null);
+
+  MIGRATIONS.forEach((sql) => {
+    db.run(sql, (err) => {
+      // "duplicate column" means migration already applied — safe to ignore
+      if (err && !err.message.includes("duplicate column")) {
+        return callback(err);
+      }
+      pending--;
+      if (pending === 0) callback(null);
+    });
+  });
+}
+
 function initializeDatabase(callback) {
   fs.readFile(schemaPath, "utf8", (readErr, schemaSql) => {
     if (readErr) {
@@ -27,7 +48,7 @@ function initializeDatabase(callback) {
         return;
       }
 
-      callback(null);
+      runMigrations(callback);
     });
   });
 }
