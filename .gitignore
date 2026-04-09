@@ -4,3 +4,4 @@ db/app.db
 .env.*
 *.log
 .DS_Store
+secret/
