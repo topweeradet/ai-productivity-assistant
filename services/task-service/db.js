@@ -17,6 +17,7 @@ const db = new sqlite3.Database(dbPath, (err) => {
 const MIGRATIONS = [
   `ALTER TABLE tasks ADD COLUMN is_recurring INTEGER NOT NULL DEFAULT 0`,
   `ALTER TABLE tasks ADD COLUMN recur_pattern TEXT`,
+  `ALTER TABLE tasks ADD COLUMN calendar_event_id TEXT`,
 ];
 
 function runMigrations(callback) {

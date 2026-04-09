@@ -25,6 +25,9 @@ CREATE TABLE IF NOT EXISTS tasks (
   is_recurring INTEGER NOT NULL DEFAULT 0,  -- 0 | 1
   recur_pattern TEXT,                        -- daily | weekly | monthly
 
+  -- calendar sync
+  calendar_event_id TEXT,
+
   -- metadata
   source TEXT DEFAULT 'manual',
 
