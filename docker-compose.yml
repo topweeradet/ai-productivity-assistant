@@ -13,3 +13,17 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+
+  mcp:
+    build: .
+    container_name: ai-productivity-assistant-mcp
+    command: node services/mcp/server.js
+    ports:
+      - "3001:3001"
+    environment:
+      - TASK_API_URL=http://api:3000
+      - MCP_PORT=3001
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
