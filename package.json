@@ -1,24 +1,16 @@
 {
   "name": "ai-productivity-assistant",
   "version": "1.0.0",
-  "description": "Personal AI assistant for task management and time blocking.",
-  "main": "services/api/server.js",
-  "directories": {
-    "doc": "docs"
-  },
+  "description": "Personal AI assistant — Telegram bot + PocketBase + LLM.",
+  "main": "services/bot/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node services/api/server.js",
-    "start:mcp": "node services/mcp/server.js"
+    "start:bot": "node services/bot/index.js",
+    "pb:setup": "node scripts/pb-setup.js"
   },
-  "keywords": [],
-  "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.12.0",
-    "express": "^5.2.1",
-    "sqlite3": "^6.0.1",
-    "zod": "^3.24.0"
+    "dotenv": "^16.4.7",
+    "telegraf": "^4.16.3"
   }
 }

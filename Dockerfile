@@ -7,6 +7,4 @@ RUN npm install --omit=dev
 
 COPY . .
 
-EXPOSE 3000
-
-CMD ["node", "services/api/server.js"]
+CMD ["node", "services/bot/index.js"]

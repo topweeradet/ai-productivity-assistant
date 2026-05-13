@@ -1,4 +1,25 @@
 services:
+  pocketbase:
+    image: ghcr.io/muchobien/pocketbase:latest
+    container_name: pocketbase
+    restart: unless-stopped
+    ports:
+      - "8090:8090"
+    volumes:
+      - ./pb_data:/pb/pb_data
+
+  bot:
+    build: .
+    container_name: telegram-bot
+    command: node services/bot/index.js
+    restart: unless-stopped
+    depends_on:
+      - pocketbase
+    environment:
+      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
+      - TELEGRAM_USER_ID=${TELEGRAM_USER_ID}
+      - POCKETBASE_URL=http://pocketbase:8090
+
   api:
     build: .
     container_name: ai-productivity-assistant-api
