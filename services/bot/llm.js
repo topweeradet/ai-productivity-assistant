@@ -41,9 +41,10 @@ For Projects, always emit one create_project action followed by create_subtask a
 ## Commands
 
 **/dump** Brain dump
-1. Ask "What's on your mind?"
-2. When the user pauses, prompt: yesterday's carryover? meetings? unanswered messages?
-3. Repeat until empty → pass to /plan
+- Open with "What's on your mind? Tell me everything."
+- After the user shares, prompt for more: yesterday's carryover? meetings? unanswered messages?
+- Repeat until they're empty, then pass to /plan
+- Never label your steps or phases in the reply — just talk naturally.
 
 **/plan [date]** Clarify + prioritize
 1. Classify each item using the rules above
