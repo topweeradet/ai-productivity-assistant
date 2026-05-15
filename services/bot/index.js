@@ -40,14 +40,17 @@ function friendlyError(err) {
   return "Something went wrong. Try again.";
 }
 
-async function handleCommand(ctx, command) {
+const activeCommand = new Map();
+
+async function handleCommand(ctx, command, userText) {
   await ctx.sendChatAction("typing");
   const chatId = ctx.chat.id;
   try {
     const context = await buildContext();
     const contextBlock = formatContextBlock(context);
-    const userText = ctx.message.text.replace(/^\/\w+\s*/, "").trim();
-    const result = await chat(command, userText, contextBlock, chatId);
+    const text = userText ?? ctx.message.text.replace(/^\/\w+\s*/, "").trim();
+    activeCommand.set(chatId, command);
+    const result = await chat(command, text, contextBlock, chatId);
     await ctx.reply(result.reply, { parse_mode: "Markdown" });
   } catch (err) {
     console.error(`Error handling ${command}:`, err.message);
@@ -79,9 +82,14 @@ bot.command("ping", async (ctx) => {
   }
 });
 
-bot.on("text", (ctx) =>
-  ctx.reply("Use a command to get started: /dump, /plan, /add, /recap, /goals, /overview, /teach")
-);
+bot.on("text", (ctx) => {
+  const chatId = ctx.chat.id;
+  const command = activeCommand.get(chatId);
+  if (command) {
+    return handleCommand(ctx, command, ctx.message.text);
+  }
+  return ctx.reply("Use a command to get started: /dump, /plan, /add, /recap, /goals, /overview, /teach");
+});
 
 bot.launch({ dropPendingUpdates: true });
 console.log("Telegram bot started (long polling)");
