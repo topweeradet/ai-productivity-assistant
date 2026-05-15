@@ -65,7 +65,7 @@ async function main() {
         { name: "measure", type: "text" },
         { name: "deadline", type: "date" },
         { name: "status", type: "select", required: true, values: ["active", "paused", "done"], maxSelect: 1 },
-        { name: "deleted", type: "bool", required: true },
+        { name: "deleted", type: "bool" },
       ],
     },
     token
@@ -79,9 +79,9 @@ async function main() {
       fields: [
         { name: "goal", type: "relation", collectionId: goals.id, cascadeDelete: false, maxSelect: 1 },
         { name: "title", type: "text", required: true },
-        { name: "status", type: "select", required: true, values: ["active", "done", "dropped"], maxSelect: 1 },
+        { name: "status", type: "select", required: true, values: ["backlog", "active", "done", "dropped"], maxSelect: 1 },
         { name: "due_date", type: "date" },
-        { name: "deleted", type: "bool", required: true },
+        { name: "deleted", type: "bool" },
       ],
     },
     token
@@ -105,7 +105,7 @@ async function main() {
         { name: "due_date", type: "date" },
         { name: "recurrence", type: "select", values: ["daily", "weekly", "monthly", "none"], maxSelect: 1 },
         { name: "next_due", type: "date" },
-        { name: "deleted", type: "bool", required: true },
+        { name: "deleted", type: "bool" },
       ],
     },
     token
@@ -121,7 +121,7 @@ async function main() {
         { name: "title", type: "text", required: true },
         { name: "status", type: "select", required: true, values: ["todo", "done"], maxSelect: 1 },
         { name: "order", type: "number" },
-        { name: "deleted", type: "bool", required: true },
+        { name: "deleted", type: "bool" },
       ],
     },
     token
@@ -159,7 +159,21 @@ async function main() {
     token
   );
 
-  console.log("\nAll 6 collections ready. PocketBase is set up for Phase 1.");
+  // 7. skills — user-defined custom instructions added via /teach
+  await upsertCollection(
+    {
+      name: "skills",
+      type: "base",
+      fields: [
+        { name: "name", type: "text", required: true },
+        { name: "description", type: "text", required: true },
+        { name: "deleted", type: "bool" },
+      ],
+    },
+    token
+  );
+
+  console.log("\nAll 7 collections ready. PocketBase is set up.");
 }
 
 main().catch((err) => {
