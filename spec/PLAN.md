@@ -34,26 +34,26 @@ _Goal: Get PocketBase running and connected to existing bot_
 _Goal: Bot understands commands and responds intelligently_
 
 ### 2.1 System Prompt
-- ⬜ Hardcode SKILL.md as system prompt in bot
-- ⬜ Build context builder:
+- ✅ Hardcode SKILL.md as system prompt in bot
+- ✅ Build context builder:
   - Fetch goals from PocketBase
   - Fetch today's backlog from PocketBase
   - Fetch upcoming deadlines
   - Inject into prompt
 
 ### 2.2 Response Parsing
-- ⬜ Implement structured JSON response format
-- ⬜ Parse `reply` field → send to Telegram
-- ⬜ Parse `actions` array → execute CRUD on PocketBase
-- ⬜ Handle LLM response errors gracefully
+- ✅ Implement structured JSON response format
+- ✅ Parse `reply` field → send to Telegram
+- ✅ Parse `actions` array → execute CRUD on PocketBase
+- ✅ Handle LLM response errors gracefully
 
 ### 2.3 Commands
-- ⬜ /dump — brain dump flow
-- ⬜ /plan — clarify + prioritize + create daily_plan records
-- ⬜ /add — add single task mid-day
-- ⬜ /recap — end of day review + update statuses
-- ⬜ /goals — view and update goals
-- ⬜ /overview — big picture 2-week view
+- ✅ /dump — brain dump flow
+- ✅ /plan — clarify + prioritize + create daily_plan records
+- ✅ /add — add single task mid-day
+- ✅ /recap — end of day review + update statuses
+- ✅ /goals — view and update goals
+- ✅ /overview — big picture 2-week view
 
 ---
 
