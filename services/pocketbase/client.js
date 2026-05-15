@@ -71,49 +71,31 @@ const projects = collection("projects");
 const tasks = {
   ...collection("tasks"),
 
-  listBacklog(sort = "-ice_score") {
-    return request(
-      "GET",
-      `/api/collections/tasks/records?${buildQuery(
-        '(deleted=false&&status="backlog")',
-        sort,
-        "project,goal"
-      )}`
-    );
+  async listBacklog(sort = "-ice_score") {
+    const res = await request("GET", `/api/collections/tasks/records?${buildQuery("deleted=false", sort, "project,goal")}`);
+    res.items = res.items.filter(t => t.status === "backlog");
+    return res;
   },
 
-  listToday() {
-    return request(
-      "GET",
-      `/api/collections/tasks/records?${buildQuery(
-        '(deleted=false&&status="today")',
-        "-ice_score",
-        "project,goal"
-      )}`
-    );
+  async listToday() {
+    const res = await request("GET", `/api/collections/tasks/records?${buildQuery("deleted=false", "-ice_score", "project,goal")}`);
+    res.items = res.items.filter(t => t.status === "today");
+    return res;
   },
 
-  listRecurringDue(today) {
-    return request(
-      "GET",
-      `/api/collections/tasks/records?${buildQuery(
-        `(deleted=false&&type="recurring"&&next_due<="${today}")`,
-        "next_due"
-      )}`
-    );
+  async listRecurringDue(today) {
+    const res = await request("GET", `/api/collections/tasks/records?${buildQuery("deleted=false", "next_due")}`);
+    res.items = res.items.filter(t => t.type === "recurring" && t.next_due && t.next_due <= today);
+    return res;
   },
 
-  listUpcoming(today, daysAhead = 3) {
+  async listUpcoming(today, daysAhead = 3) {
     const future = new Date(today);
     future.setDate(future.getDate() + daysAhead);
     const until = future.toISOString().split("T")[0];
-    return request(
-      "GET",
-      `/api/collections/tasks/records?${buildQuery(
-        `(deleted=false&&status!="done"&&status!="dropped"&&due_date>="${today}"&&due_date<="${until}")`,
-        "due_date"
-      )}`
-    );
+    const res = await request("GET", `/api/collections/tasks/records?${buildQuery(`deleted=false&&due_date>='${today}'`, "due_date")}`);
+    res.items = res.items.filter(t => t.status !== "done" && t.status !== "dropped" && t.due_date <= until);
+    return res;
   },
 };
 

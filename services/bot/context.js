@@ -13,22 +13,34 @@ function todayISO() {
 async function buildContext() {
   const today = todayISO();
 
-  const [goalsRes, backlogRes, todayRes, upcomingRes, recurringRes] = await Promise.all([
-    pb.goals.list('status="active"'),
-    pb.tasks.listBacklog(),
-    pb.tasks.listToday(),
-    pb.tasks.listUpcoming(today),
-    pb.tasks.listRecurringDue(today),
+  const [goalsRes, tasksRes] = await Promise.all([
+    pb.goals.list(),
+    pb.tasks.list(),
   ]);
 
-  return {
-    today,
-    goals: goalsRes.items ?? [],
-    backlog: backlogRes.items ?? [],
-    todayTasks: todayRes.items ?? [],
-    upcoming: upcomingRes.items ?? [],
-    recurringDue: recurringRes.items ?? [],
-  };
+  const goals = (goalsRes.items ?? []).filter(g => g.status === "active" && !g.deleted);
+  const allTasks = (tasksRes.items ?? []).filter(t => !t.deleted);
+
+  const backlog = allTasks
+    .filter(t => t.status === "backlog")
+    .sort((a, b) => (b.ice_score ?? 0) - (a.ice_score ?? 0));
+
+  const todayTasks = allTasks
+    .filter(t => t.status === "today")
+    .sort((a, b) => (b.ice_score ?? 0) - (a.ice_score ?? 0));
+
+  const upcoming = allTasks.filter(t => {
+    if (!t.due_date || t.status === "done" || t.status === "dropped") return false;
+    const future = new Date(today);
+    future.setDate(future.getDate() + 3);
+    return t.due_date >= today && t.due_date <= future.toISOString().split("T")[0];
+  });
+
+  const recurringDue = allTasks.filter(t =>
+    t.type === "recurring" && t.next_due && t.next_due <= today
+  );
+
+  return { today, goals, backlog, todayTasks, upcoming, recurringDue };
 }
 
 // Serialises context into a plain-text block to append to the system prompt.

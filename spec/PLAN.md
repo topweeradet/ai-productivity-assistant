@@ -13,20 +13,20 @@ version: 1.0.0
 _Goal: Get PocketBase running and connected to existing bot_
 
 ### 1.1 PocketBase Setup
-- ⬜ Add PocketBase to Docker Compose on Oracle VPS
-- ⬜ Create all 6 collections per SCHEMA.md
-- ⬜ Verify REST API working with test CRUD calls
-- ⬜ Confirm soft delete pattern works
+- ✅ Add PocketBase to Docker Compose
+- ✅ Create all 6 collections per SCHEMA.md
+- ✅ Verify REST API working with test CRUD calls
+- ✅ Confirm soft delete pattern works
 
 ### 1.2 Connect Existing Node.js Bot to PocketBase
-- ⬜ Review existing project structure
-- ⬜ Add PocketBase client to Node.js project
-- ⬜ Write CRUD helper functions for each collection
-- ⬜ Test read/write from bot to PocketBase
+- ✅ Review existing project structure
+- ✅ Add PocketBase client to Node.js project
+- ✅ Write CRUD helper functions for each collection
+- ✅ Test read/write from bot to PocketBase
 
 ### 1.3 Date Injection
-- ⬜ Add today's date to every LLM prompt automatically
-- ⬜ Test that LLM receives correct date in context
+- ✅ Add today's date to every LLM prompt automatically
+- ✅ Test that LLM receives correct date in context
 
 ---
 

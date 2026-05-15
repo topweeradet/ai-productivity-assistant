@@ -11,32 +11,37 @@ async function request(method, path, body, token) {
   const opts = { method, headers };
   if (body) opts.body = JSON.stringify(body);
   const res = await fetch(`${BASE_URL}${path}`, opts);
+  if (res.status === 204) return null;
   const data = await res.json();
   if (!res.ok) throw new Error(`${path} → ${JSON.stringify(data)}`);
   return data;
 }
 
 async function getAdminToken() {
-  const data = await request("POST", "/api/admins/auth-with-password", {
+  const data = await request("POST", "/api/collections/_superusers/auth-with-password", {
     identity: process.env.PB_ADMIN_EMAIL,
     password: process.env.PB_ADMIN_PASSWORD,
   });
   return data.token;
 }
 
-async function createCollection(schema, token) {
+const OPEN_RULES = { listRule: "", viewRule: "", createRule: "", updateRule: "", deleteRule: "" };
+
+async function upsertCollection(schema, token) {
+  let existing = null;
   try {
-    const result = await request("POST", "/api/collections", schema, token);
-    console.log(`✓ Created collection: ${schema.name} (${result.id})`);
+    existing = await request("GET", `/api/collections/${schema.name}`, null, token);
+  } catch (_) {}
+
+  if (existing) {
+    const result = await request("PATCH", `/api/collections/${existing.id}`, { ...schema, ...OPEN_RULES }, token);
+    console.log(`✓ Updated collection: ${schema.name}`);
     return result;
-  } catch (err) {
-    if (err.message.includes("already exists")) {
-      console.log(`⚠ Collection already exists: ${schema.name} — skipping`);
-      const list = await request("GET", `/api/collections/${schema.name}`, null, token);
-      return list;
-    }
-    throw err;
   }
+
+  const result = await request("POST", "/api/collections", { ...schema, ...OPEN_RULES }, token);
+  console.log(`✓ Created collection: ${schema.name} (${result.id})`);
+  return result;
 }
 
 async function main() {
@@ -50,26 +55,16 @@ async function main() {
   console.log("Authenticated as admin\n");
 
   // 1. goals — no dependencies
-  const goals = await createCollection(
+  const goals = await upsertCollection(
     {
       name: "goals",
       type: "base",
-      schema: [
+      fields: [
         { name: "title", type: "text", required: true },
-        {
-          name: "type",
-          type: "select",
-          required: true,
-          options: { values: ["long-term", "short-term"] },
-        },
+        { name: "type", type: "select", required: true, values: ["long-term", "short-term"], maxSelect: 1 },
         { name: "measure", type: "text" },
         { name: "deadline", type: "date" },
-        {
-          name: "status",
-          type: "select",
-          required: true,
-          options: { values: ["active", "paused", "done"] },
-        },
+        { name: "status", type: "select", required: true, values: ["active", "paused", "done"], maxSelect: 1 },
         { name: "deleted", type: "bool", required: true },
       ],
     },
@@ -77,23 +72,14 @@ async function main() {
   );
 
   // 2. projects — depends on goals
-  const projects = await createCollection(
+  const projects = await upsertCollection(
     {
       name: "projects",
       type: "base",
-      schema: [
-        {
-          name: "goal",
-          type: "relation",
-          options: { collectionId: goals.id, cascadeDelete: false, maxSelect: 1 },
-        },
+      fields: [
+        { name: "goal", type: "relation", collectionId: goals.id, cascadeDelete: false, maxSelect: 1 },
         { name: "title", type: "text", required: true },
-        {
-          name: "status",
-          type: "select",
-          required: true,
-          options: { values: ["active", "done", "dropped"] },
-        },
+        { name: "status", type: "select", required: true, values: ["active", "done", "dropped"], maxSelect: 1 },
         { name: "due_date", type: "date" },
         { name: "deleted", type: "bool", required: true },
       ],
@@ -102,44 +88,22 @@ async function main() {
   );
 
   // 3. tasks — depends on goals + projects
-  const tasks = await createCollection(
+  const tasks = await upsertCollection(
     {
       name: "tasks",
       type: "base",
-      schema: [
-        {
-          name: "project",
-          type: "relation",
-          options: { collectionId: projects.id, cascadeDelete: false, maxSelect: 1 },
-        },
-        {
-          name: "goal",
-          type: "relation",
-          options: { collectionId: goals.id, cascadeDelete: false, maxSelect: 1 },
-        },
+      fields: [
+        { name: "project", type: "relation", collectionId: projects.id, cascadeDelete: false, maxSelect: 1 },
+        { name: "goal", type: "relation", collectionId: goals.id, cascadeDelete: false, maxSelect: 1 },
         { name: "title", type: "text", required: true },
-        {
-          name: "type",
-          type: "select",
-          required: true,
-          options: { values: ["task", "recurring", "idea"] },
-        },
-        {
-          name: "status",
-          type: "select",
-          required: true,
-          options: { values: ["backlog", "today", "done", "dropped"] },
-        },
+        { name: "type", type: "select", required: true, values: ["task", "recurring", "idea"], maxSelect: 1 },
+        { name: "status", type: "select", required: true, values: ["backlog", "today", "done", "dropped"], maxSelect: 1 },
         { name: "impact", type: "number" },
         { name: "confidence", type: "number" },
         { name: "ease", type: "number" },
         { name: "ice_score", type: "number" },
         { name: "due_date", type: "date" },
-        {
-          name: "recurrence",
-          type: "select",
-          options: { values: ["daily", "weekly", "monthly", "none"] },
-        },
+        { name: "recurrence", type: "select", values: ["daily", "weekly", "monthly", "none"], maxSelect: 1 },
         { name: "next_due", type: "date" },
         { name: "deleted", type: "bool", required: true },
       ],
@@ -148,24 +112,14 @@ async function main() {
   );
 
   // 4. subtasks — depends on tasks
-  await createCollection(
+  await upsertCollection(
     {
       name: "subtasks",
       type: "base",
-      schema: [
-        {
-          name: "task",
-          type: "relation",
-          required: true,
-          options: { collectionId: tasks.id, cascadeDelete: false, maxSelect: 1 },
-        },
+      fields: [
+        { name: "task", type: "relation", required: true, collectionId: tasks.id, cascadeDelete: false, maxSelect: 1 },
         { name: "title", type: "text", required: true },
-        {
-          name: "status",
-          type: "select",
-          required: true,
-          options: { values: ["todo", "done"] },
-        },
+        { name: "status", type: "select", required: true, values: ["todo", "done"], maxSelect: 1 },
         { name: "order", type: "number" },
         { name: "deleted", type: "bool", required: true },
       ],
@@ -174,18 +128,13 @@ async function main() {
   );
 
   // 5. daily_plans — depends on tasks
-  await createCollection(
+  await upsertCollection(
     {
       name: "daily_plans",
       type: "base",
-      schema: [
+      fields: [
         { name: "date", type: "date", required: true },
-        {
-          name: "task",
-          type: "relation",
-          required: true,
-          options: { collectionId: tasks.id, cascadeDelete: false, maxSelect: 1 },
-        },
+        { name: "task", type: "relation", required: true, collectionId: tasks.id, cascadeDelete: false, maxSelect: 1 },
         { name: "priority", type: "number", required: true },
         { name: "note", type: "text" },
       ],
@@ -194,24 +143,14 @@ async function main() {
   );
 
   // 6. activity_log — depends on tasks (never soft-deleted)
-  await createCollection(
+  await upsertCollection(
     {
       name: "activity_log",
       type: "base",
-      schema: [
+      fields: [
         { name: "date", type: "date", required: true },
-        {
-          name: "task",
-          type: "relation",
-          required: true,
-          options: { collectionId: tasks.id, cascadeDelete: false, maxSelect: 1 },
-        },
-        {
-          name: "action",
-          type: "select",
-          required: true,
-          options: { values: ["started", "completed", "blocked", "deferred", "dropped"] },
-        },
+        { name: "task", type: "relation", required: true, collectionId: tasks.id, cascadeDelete: false, maxSelect: 1 },
+        { name: "action", type: "select", required: true, values: ["started", "completed", "blocked", "deferred", "dropped"], maxSelect: 1 },
         { name: "completed_at", type: "date" },
         { name: "block_reason", type: "text" },
         { name: "note", type: "text" },

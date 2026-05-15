@@ -6,7 +6,7 @@ services:
     ports:
       - "8090:8090"
     volumes:
-      - ./pb_data:/pb/pb_data
+      - pb_data:/pb_data
 
   bot:
     build: .
@@ -15,7 +15,11 @@ services:
     restart: unless-stopped
     depends_on:
       - pocketbase
+    env_file:
+      - .env
     environment:
-      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
-      - TELEGRAM_USER_ID=${TELEGRAM_USER_ID}
+      - TELEGRAM_WHITELIST_IDS=${TELEGRAM_USER_ID}
       - POCKETBASE_URL=http://pocketbase:8090
+
+volumes:
+  pb_data:

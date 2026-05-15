@@ -5,4 +5,4 @@ pb_data/
 .env.*
 *.log
 .DS_Store
-secret/
+secret/.claude/worktrees/
