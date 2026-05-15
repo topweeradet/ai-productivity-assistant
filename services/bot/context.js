@@ -1,7 +1,3 @@
-// Builds the LLM prompt context for each conversation turn.
-// Injects today's date (fixes the "Claude doesn't know the date" problem) and
-// fetches live goals + backlog from PocketBase for Phase 2 context building.
-
 const pb = require("../pocketbase/client");
 
 function todayISO() {
@@ -13,13 +9,15 @@ function todayISO() {
 async function buildContext() {
   const today = todayISO();
 
-  const [goalsRes, tasksRes] = await Promise.all([
+  const [goalsRes, tasksRes, activityRes] = await Promise.all([
     pb.goals.list(),
     pb.tasks.list(),
+    pb.activity_log.list(`date>="${today}"`),
   ]);
 
   const goals = (goalsRes.items ?? []).filter(g => g.status === "active" && !g.deleted);
   const allTasks = (tasksRes.items ?? []).filter(t => !t.deleted);
+  const todayActivity = activityRes.items ?? [];
 
   const backlog = allTasks
     .filter(t => t.status === "backlog")
@@ -37,10 +35,10 @@ async function buildContext() {
   });
 
   const recurringDue = allTasks.filter(t =>
-    t.type === "recurring" && t.next_due && t.next_due <= today
+    t.type === "recurring" && t.next_due && t.next_due.slice(0, 10) <= today
   );
 
-  return { today, goals, backlog, todayTasks, upcoming, recurringDue };
+  return { today, goals, backlog, todayTasks, upcoming, recurringDue, todayActivity };
 }
 
 // Serialises context into a plain-text block to append to the system prompt.
@@ -72,6 +70,13 @@ function formatContextBlock(ctx) {
   if (ctx.recurringDue.length) {
     lines.push("\n## Recurring Tasks Due Today");
     ctx.recurringDue.forEach((t) => lines.push(`- [${t.id}] ${t.title}`));
+  }
+
+  if (ctx.todayActivity.length) {
+    lines.push("\n## Today's Activity Log");
+    ctx.todayActivity.forEach((a) =>
+      lines.push(`- [${a.task}] ${a.action}${a.note ? ": " + a.note : ""}`)
+    );
   }
 
   return lines.join("\n");

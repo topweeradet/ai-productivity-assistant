@@ -61,23 +61,23 @@ _Goal: Bot understands commands and responds intelligently_
 _Goal: Assistant feels smart, not just functional_
 
 ### 3.1 Clarify Layer
-- ⬜ LLM correctly classifies Task vs Project vs Goal vs Idea
-- ⬜ Projects auto-create subtasks
-- ⬜ Goals saved to goals collection
+- ✅ LLM correctly classifies Task vs Project vs Goal vs Idea
+- ✅ Projects auto-create subtasks
+- ✅ Goals saved to goals collection
 
 ### 3.2 ICE Scoring
-- ⬜ LLM scores each task during /plan
-- ⬜ ice_score calculated and saved to PocketBase
-- ⬜ Daily plan sorted by ice_score + goal alignment
+- ✅ LLM scores each task during /plan
+- ✅ ice_score calculated and saved to PocketBase
+- ✅ Daily plan sorted by ice_score + goal alignment
 
 ### 3.3 Recurring Tasks
-- ⬜ Detect recurring tasks in /plan
-- ⬜ Set recurrence field and next_due date
-- ⬜ Auto-surface recurring tasks when next_due <= today
+- ✅ Detect recurring tasks in /plan
+- ✅ Set recurrence field and next_due date
+- ✅ Auto-surface recurring tasks when next_due <= today
 
 ### 3.4 Activity Logging
-- ⬜ Log to activity_log on: started, completed, blocked, deferred
-- ⬜ /recap reads activity_log to surface patterns
+- ✅ Log to activity_log on: started, completed, blocked, deferred
+- ✅ /recap reads activity_log to surface patterns
 
 ---
 
@@ -85,22 +85,22 @@ _Goal: Assistant feels smart, not just functional_
 _Goal: Reliable daily driver_
 
 ### 4.1 Error Handling
-- ⬜ Graceful LLM timeout handling
-- ⬜ PocketBase connection retry logic
-- ⬜ User-friendly error messages in Telegram
+- ✅ Graceful LLM timeout handling (30s AbortSignal)
+- ✅ PocketBase connection retry logic (3 attempts, exponential backoff)
+- ✅ User-friendly error messages in Telegram
 
 ### 4.2 Conversation Memory
-- ⬜ Store conversation history in-memory per session
-- ⬜ Clear history after /recap or session timeout
+- ✅ Store conversation history in-memory per session (keyed by chatId)
+- ✅ Clear history after /recap or 2h session timeout
 
 ### 4.3 /teach Command
-- ⬜ Allow user to add custom skills via chat
-- ⬜ Persist custom skills (decide: PocketBase table or text file)
+- ✅ Allow user to add custom skills via chat
+- ✅ Persist custom skills in PocketBase `skills` collection
 
 ### 4.4 Security
-- ⬜ Whitelist Telegram user IDs (personal use only)
-- ⬜ PocketBase not exposed publicly
-- ⬜ API keys in environment variables
+- ✅ Whitelist Telegram user IDs (personal use only)
+- ✅ PocketBase bound to 127.0.0.1 only (not publicly exposed)
+- ✅ API keys in environment variables
 
 ---
 

@@ -1,7 +1,7 @@
 require("dotenv").config();
 const { Telegraf } = require("telegraf");
 const { buildContext, formatContextBlock } = require("./context");
-const { chat } = require("./llm");
+const { chat, clearSession } = require("./llm");
 
 const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
 if (!TELEGRAM_TOKEN) {
@@ -20,7 +20,6 @@ const WHITELIST = process.env.TELEGRAM_WHITELIST_IDS
 
 const bot = new Telegraf(TELEGRAM_TOKEN);
 
-// Auth guard
 bot.use((ctx, next) => {
   if (WHITELIST && !WHITELIST.has(ctx.from?.id)) {
     return ctx.reply("Unauthorized.");
@@ -28,23 +27,37 @@ bot.use((ctx, next) => {
   return next();
 });
 
+function friendlyError(err) {
+  if (err.name === "AbortError" || err.message?.includes("abort")) {
+    return "The assistant took too long to respond. Please try again.";
+  }
+  if (err.message?.includes("PocketBase") || err.message?.includes("fetch")) {
+    return "Couldn't reach the database. Make sure PocketBase is running, then try again.";
+  }
+  if (err.status === 529 || err.message?.includes("overloaded")) {
+    return "The AI is overloaded right now. Try again in a moment.";
+  }
+  return "Something went wrong. Try again.";
+}
+
 async function handleCommand(ctx, command) {
   await ctx.sendChatAction("typing");
+  const chatId = ctx.chat.id;
   try {
     const context = await buildContext();
     const contextBlock = formatContextBlock(context);
     const userText = ctx.message.text.replace(/^\/\w+\s*/, "").trim();
-    const result = await chat(command, userText, contextBlock);
+    const result = await chat(command, userText, contextBlock, chatId);
     await ctx.reply(result.reply, { parse_mode: "Markdown" });
   } catch (err) {
     console.error(`Error handling ${command}:`, err.message);
-    await ctx.reply("Something went wrong. Try again.");
+    await ctx.reply(friendlyError(err));
   }
 }
 
 bot.command("start", (ctx) =>
   ctx.reply(
-    "Personal assistant ready.\n\nCommands:\n/dump — brain dump\n/plan — clarify & prioritise\n/add — add a task mid-day\n/recap — end of day review\n/goals — view & update goals\n/overview — 2-week big picture"
+    "Personal assistant ready.\n\nCommands:\n/dump — brain dump\n/plan — clarify & prioritise\n/add — add a task mid-day\n/recap — end of day review\n/goals — view & update goals\n/overview — 2-week big picture\n/teach — add a custom skill"
   )
 );
 
@@ -54,6 +67,7 @@ bot.command("add", (ctx) => handleCommand(ctx, "/add"));
 bot.command("recap", (ctx) => handleCommand(ctx, "/recap"));
 bot.command("goals", (ctx) => handleCommand(ctx, "/goals"));
 bot.command("overview", (ctx) => handleCommand(ctx, "/overview"));
+bot.command("teach", (ctx) => handleCommand(ctx, "/teach"));
 
 bot.command("ping", async (ctx) => {
   try {
@@ -66,7 +80,7 @@ bot.command("ping", async (ctx) => {
 });
 
 bot.on("text", (ctx) =>
-  ctx.reply("Use a command to get started: /dump, /plan, /add, /recap, /goals, /overview")
+  ctx.reply("Use a command to get started: /dump, /plan, /add, /recap, /goals, /overview, /teach")
 );
 
 bot.launch({ dropPendingUpdates: true });

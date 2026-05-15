@@ -1,23 +1,39 @@
-// PocketBase REST client for all 6 collections defined in SCHEMA.md.
+// PocketBase REST client for all collections defined in SCHEMA.md.
 // All write operations enforce soft-delete (deleted=false on create, deleted=true on remove).
 // All reads automatically filter deleted=false except activity_log (permanent record).
 
 const BASE_URL = process.env.POCKETBASE_URL || "http://localhost:8090";
+const MAX_RETRIES = 3;
+const RETRY_BASE_MS = 300;
 
-async function request(method, path, body) {
+async function request(method, path, body, attempt = 1) {
   const opts = {
     method,
     headers: { "Content-Type": "application/json" },
   };
   if (body) opts.body = JSON.stringify(body);
 
-  const res = await fetch(`${BASE_URL}${path}`, opts);
-  const data = await res.json();
+  try {
+    const res = await fetch(`${BASE_URL}${path}`, opts);
+    const data = await res.json();
 
-  if (!res.ok) {
-    throw new Error(data.message || `PocketBase ${res.status}: ${path}`);
+    if (!res.ok) {
+      // 4xx errors are not retryable
+      if (res.status >= 400 && res.status < 500) {
+        throw new Error(data.message || `PocketBase ${res.status}: ${path}`);
+      }
+      throw new Error(data.message || `PocketBase ${res.status}: ${path}`);
+    }
+    return data;
+  } catch (err) {
+    const retryable = err.name === "TypeError" || (err.message && err.message.includes("fetch"));
+    if (retryable && attempt < MAX_RETRIES) {
+      const delay = RETRY_BASE_MS * 2 ** (attempt - 1);
+      await new Promise((r) => setTimeout(r, delay));
+      return request(method, path, body, attempt + 1);
+    }
+    throw err;
   }
-  return data;
 }
 
 function buildQuery(filter, sort, expand, page = 1, perPage = 200) {
@@ -56,7 +72,6 @@ function collection(name, { softDelete = true } = {}) {
       return request("PATCH", `${base}/${id}`, data);
     },
 
-    // Soft delete: sets deleted=true instead of destroying the record
     remove(id) {
       if (!softDelete) throw new Error(`${name} does not support soft delete`);
       return request("PATCH", `${base}/${id}`, { deleted: true });
@@ -85,7 +100,7 @@ const tasks = {
 
   async listRecurringDue(today) {
     const res = await request("GET", `/api/collections/tasks/records?${buildQuery("deleted=false", "next_due")}`);
-    res.items = res.items.filter(t => t.type === "recurring" && t.next_due && t.next_due <= today);
+    res.items = res.items.filter(t => t.type === "recurring" && t.next_due && t.next_due.slice(0, 10) <= today);
     return res;
   },
 
@@ -119,4 +134,7 @@ const daily_plans = {
 // activity_log is permanent — no soft delete, no deleted field
 const activity_log = collection("activity_log", { softDelete: false });
 
-module.exports = { goals, projects, tasks, subtasks, daily_plans, activity_log };
+// skills — user-defined custom instructions added via /teach
+const skills = collection("skills");
+
+module.exports = { goals, projects, tasks, subtasks, daily_plans, activity_log, skills };
