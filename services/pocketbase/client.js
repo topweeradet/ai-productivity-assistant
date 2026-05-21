@@ -81,19 +81,17 @@ function collection(name, { softDelete = true } = {}) {
 
 const goals = collection("goals");
 
-const projects = collection("projects");
-
 const tasks = {
   ...collection("tasks"),
 
   async listBacklog(sort = "-ice_score") {
-    const res = await request("GET", `/api/collections/tasks/records?${buildQuery("deleted=false", sort, "project,goal")}`);
+    const res = await request("GET", `/api/collections/tasks/records?${buildQuery("deleted=false", sort, "goal")}`);
     res.items = res.items.filter(t => t.status === "backlog");
     return res;
   },
 
   async listToday() {
-    const res = await request("GET", `/api/collections/tasks/records?${buildQuery("deleted=false", "-ice_score", "project,goal")}`);
+    const res = await request("GET", `/api/collections/tasks/records?${buildQuery("deleted=false", "-ice_score", "goal")}`);
     res.items = res.items.filter(t => t.status === "today");
     return res;
   },
@@ -113,8 +111,6 @@ const tasks = {
     return res;
   },
 };
-
-const subtasks = collection("subtasks");
 
 const daily_plans = {
   ...collection("daily_plans", { softDelete: false }),
@@ -137,4 +133,4 @@ const activity_log = collection("activity_log", { softDelete: false });
 // skills — user-defined custom instructions added via /teach
 const skills = collection("skills");
 
-module.exports = { goals, projects, tasks, subtasks, daily_plans, activity_log, skills };
+module.exports = { goals, tasks, daily_plans, activity_log, skills };

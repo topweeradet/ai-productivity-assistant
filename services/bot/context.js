@@ -19,8 +19,12 @@ async function buildContext() {
   const allTasks = (tasksRes.items ?? []).filter(t => !t.deleted);
   const todayActivity = activityRes.items ?? [];
 
+  const projects = allTasks.filter(
+    t => t.type === "project" && t.status !== "done" && t.status !== "dropped"
+  );
+
   const backlog = allTasks
-    .filter(t => t.status === "backlog")
+    .filter(t => t.status === "backlog" && t.type !== "project")
     .sort((a, b) => (b.ice_score ?? 0) - (a.ice_score ?? 0));
 
   const todayTasks = allTasks
@@ -38,7 +42,7 @@ async function buildContext() {
     t.type === "recurring" && t.next_due && t.next_due.slice(0, 10) <= today
   );
 
-  return { today, goals, backlog, todayTasks, upcoming, recurringDue, todayActivity };
+  return { today, goals, projects, backlog, todayTasks, upcoming, recurringDue, todayActivity };
 }
 
 // Serialises context into a plain-text block to append to the system prompt.
@@ -48,6 +52,15 @@ function formatContextBlock(ctx) {
   if (ctx.goals.length) {
     lines.push("\n## Active Goals");
     ctx.goals.forEach((g) => lines.push(`- [${g.id}] ${g.title} (${g.type})`));
+  }
+
+  if (ctx.projects.length) {
+    lines.push("\n## Active Projects");
+    ctx.projects.forEach((p) => {
+      const subtaskCount = ctx.backlog.filter(t => t.parent === p.id).length
+        + ctx.todayTasks.filter(t => t.parent === p.id).length;
+      lines.push(`- [${p.id}] ${p.title} (${subtaskCount} subtask${subtaskCount !== 1 ? "s" : ""})`);
+    });
   }
 
   if (ctx.todayTasks.length) {

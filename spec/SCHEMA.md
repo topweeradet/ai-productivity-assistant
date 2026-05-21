@@ -1,5 +1,5 @@
 # Database Schema
-version: 1.0.0
+version: 2.0.0
 
 ## Platform
 PocketBase (SQLite under the hood)
@@ -28,29 +28,17 @@ Stores long-term and short-term goals.
 | deleted | Bool | ✅ | default: false |
 | created | DateTime | auto | PocketBase auto |
 
-### projects
-Groups of related tasks working toward a goal.
-
-| Field | Type | Required | Notes |
-|-------|------|----------|-------|
-| id | UUID | auto | |
-| goal | Relation → goals | | nullable — project may not link to a goal |
-| title | Text | ✅ | |
-| status | Select | ✅ | active, done, dropped |
-| due_date | Date | | |
-| deleted | Bool | ✅ | default: false |
-| created | DateTime | auto | |
-
 ### tasks
-Individual actionable items. Core of the system.
+All items: regular tasks, projects, and subtasks in one collection.
+A project is `type="project"`. A subtask has `parent` set to its project task id.
 
 | Field | Type | Required | Notes |
 |-------|------|----------|-------|
 | id | UUID | auto | |
-| project | Relation → projects | | nullable — standalone task |
+| parent | Relation → tasks | | nullable — set for subtasks |
 | goal | Relation → goals | | nullable — direct goal link |
 | title | Text | ✅ | |
-| type | Select | ✅ | task, recurring, idea |
+| type | Select | ✅ | task, project, recurring, idea |
 | status | Select | ✅ | backlog, today, done, dropped |
 | impact | Number | | ICE score 1-10 |
 | confidence | Number | | ICE score 1-10 |
@@ -59,19 +47,7 @@ Individual actionable items. Core of the system.
 | due_date | Date | | |
 | recurrence | Select | | daily, weekly, monthly, none |
 | next_due | Date | | For recurring tasks |
-| deleted | Bool | ✅ | default: false |
-| created | DateTime | auto | |
-
-### subtasks
-Steps within a task.
-
-| Field | Type | Required | Notes |
-|-------|------|----------|-------|
-| id | UUID | auto | |
-| task | Relation → tasks | ✅ | |
-| title | Text | ✅ | |
-| status | Select | ✅ | todo, done |
-| order | Number | | Sort order |
+| order | Number | | Sort order within parent |
 | deleted | Bool | ✅ | default: false |
 | created | DateTime | auto | |
 
@@ -103,33 +79,58 @@ Never soft-deleted — permanent record.
 | note | Text | | |
 | created | DateTime | auto | |
 
+### skills
+User-defined custom instructions added via /teach.
+
+| Field | Type | Required | Notes |
+|-------|------|----------|-------|
+| id | UUID | auto | |
+| name | Text | ✅ | |
+| description | Text | ✅ | |
+| deleted | Bool | ✅ | default: false |
+| created | DateTime | auto | |
+
 ## Relationships
 
 ```
 goals (1)
-  └── projects (many) via project.goal
-        └── tasks (many) via task.project
-              ├── subtasks (many) via subtask.task
-              ├── daily_plans (many) via daily_plan.task
-              └── activity_log (many) via activity_log.task
-
-goals (1)
   └── tasks (many) via task.goal
-      (direct link — task without a project)
+
+tasks (self-referential)
+  └── subtasks (many) via task.parent
+        ├── daily_plans (many) via daily_plan.task
+        └── activity_log (many) via activity_log.task
 ```
+
+## Task Hierarchy
+
+- `type="project"` + no parent → top-level project
+- `type="task"` + parent set → subtask of a project
+- `type="task"` + no parent → standalone task
+- `type="recurring"` → recurring task (has recurrence + next_due)
+- `type="idea"` → not yet actionable
 
 ## Common Queries
 
 ```
+# Active projects with their subtasks
+GET /api/collections/tasks/records
+  ?filter=(type='project' && deleted=false && status!='done')
+
+# Subtasks of a project
+GET /api/collections/tasks/records
+  ?filter=(parent='PROJECT_ID' && deleted=false)
+  &sort=order
+
 # Today's plan
 GET /api/collections/daily_plans/records
-  ?filter=(date='2024-11-12' && task.deleted=false)
-  &expand=task,task.project,task.goal
+  ?filter=(date='2024-11-12')
+  &expand=task
   &sort=priority
 
-# Active backlog
+# Active backlog (non-project tasks only)
 GET /api/collections/tasks/records
-  ?filter=(status='backlog' && deleted=false)
+  ?filter=(status='backlog' && deleted=false && type!='project')
   &sort=-ice_score
 
 # Upcoming deadlines (next 3 days)
@@ -140,16 +141,6 @@ GET /api/collections/tasks/records
 # Recurring tasks due today
 GET /api/collections/tasks/records
   ?filter=(type='recurring' && next_due<='2024-11-12' && deleted=false)
-
-# Goal progress
-GET /api/collections/tasks/records
-  ?filter=(goal='GOAL_ID' && deleted=false)
-  → count done vs total
-
-# Block patterns
-GET /api/collections/activity_log/records
-  ?filter=(action='blocked')
-  &sort=-created
 ```
 
 ## Soft Delete Pattern

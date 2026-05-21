@@ -1,11 +1,11 @@
 {
   "hooks": {
-    "Stop": [
+    "UserPromptSubmit": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "echo '{\"hookSpecificOutput\": {\"hookEventName\": \"Stop\", \"additionalContext\": \"This is a backend-only Node.js project (Express API + MCP server). There is no frontend, no browser UI, and nothing previewable in a browser. Never start a dev server or run preview verification workflows for this project.\"}}'",
+            "command": "echo '{\"hookSpecificOutput\": {\"hookEventName\": \"UserPromptSubmit\", \"additionalContext\": \"This is a backend-only Node.js project (Express API + MCP server). There is no frontend, no browser UI, and nothing previewable in a browser. Never start a dev server or run preview verification workflows for this project.\"}}'",
             "timeout": 5
           }
         ]

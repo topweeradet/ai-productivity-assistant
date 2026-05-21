@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Creates all 6 PocketBase collections per SCHEMA.md.
+// Creates all 5 PocketBase collections per SCHEMA.md.
 // Run once after PocketBase first starts:
 //   PB_ADMIN_EMAIL=admin@example.com PB_ADMIN_PASSWORD=yourpass node scripts/pb-setup.js
 
@@ -71,63 +71,44 @@ async function main() {
     token
   );
 
-  // 2. projects — depends on goals
-  const projects = await upsertCollection(
-    {
-      name: "projects",
-      type: "base",
-      fields: [
-        { name: "goal", type: "relation", collectionId: goals.id, cascadeDelete: false, maxSelect: 1 },
-        { name: "title", type: "text", required: true },
-        { name: "status", type: "select", required: true, values: ["backlog", "active", "done", "dropped"], maxSelect: 1 },
-        { name: "due_date", type: "date" },
-        { name: "deleted", type: "bool" },
-      ],
-    },
+  // 2. tasks — depends on goals. Projects and subtasks are both represented here.
+  //    First pass: create without self-referential parent field (need tasks.id first).
+  const tasksFields = [
+    { name: "parent", type: "relation", collectionId: "TASKS_ID_PLACEHOLDER", cascadeDelete: false, maxSelect: 1 },
+    { name: "goal", type: "relation", collectionId: goals.id, cascadeDelete: false, maxSelect: 1 },
+    { name: "title", type: "text", required: true },
+    { name: "type", type: "select", required: true, values: ["task", "project", "recurring", "idea"], maxSelect: 1 },
+    { name: "status", type: "select", required: true, values: ["backlog", "today", "done", "dropped"], maxSelect: 1 },
+    { name: "impact", type: "number" },
+    { name: "confidence", type: "number" },
+    { name: "ease", type: "number" },
+    { name: "ice_score", type: "number" },
+    { name: "due_date", type: "date" },
+    { name: "recurrence", type: "select", values: ["daily", "weekly", "monthly", "none"], maxSelect: 1 },
+    { name: "next_due", type: "date" },
+    { name: "order", type: "number" },
+    { name: "deleted", type: "bool" },
+  ];
+
+  // Create tasks without parent first (placeholder will be replaced in second pass)
+  const tasks = await upsertCollection(
+    { name: "tasks", type: "base", fields: tasksFields.filter(f => f.name !== "parent") },
     token
   );
 
-  // 3. tasks — depends on goals + projects
-  const tasks = await upsertCollection(
+  // Second pass: add parent self-reference now that tasks.id is known
+  await upsertCollection(
     {
       name: "tasks",
       type: "base",
-      fields: [
-        { name: "project", type: "relation", collectionId: projects.id, cascadeDelete: false, maxSelect: 1 },
-        { name: "goal", type: "relation", collectionId: goals.id, cascadeDelete: false, maxSelect: 1 },
-        { name: "title", type: "text", required: true },
-        { name: "type", type: "select", required: true, values: ["task", "recurring", "idea"], maxSelect: 1 },
-        { name: "status", type: "select", required: true, values: ["backlog", "today", "done", "dropped"], maxSelect: 1 },
-        { name: "impact", type: "number" },
-        { name: "confidence", type: "number" },
-        { name: "ease", type: "number" },
-        { name: "ice_score", type: "number" },
-        { name: "due_date", type: "date" },
-        { name: "recurrence", type: "select", values: ["daily", "weekly", "monthly", "none"], maxSelect: 1 },
-        { name: "next_due", type: "date" },
-        { name: "deleted", type: "bool" },
-      ],
+      fields: tasksFields.map(f =>
+        f.name === "parent" ? { ...f, collectionId: tasks.id } : f
+      ),
     },
     token
   );
 
-  // 4. subtasks — depends on tasks
-  await upsertCollection(
-    {
-      name: "subtasks",
-      type: "base",
-      fields: [
-        { name: "task", type: "relation", required: true, collectionId: tasks.id, cascadeDelete: false, maxSelect: 1 },
-        { name: "title", type: "text", required: true },
-        { name: "status", type: "select", required: true, values: ["todo", "done"], maxSelect: 1 },
-        { name: "order", type: "number" },
-        { name: "deleted", type: "bool" },
-      ],
-    },
-    token
-  );
-
-  // 5. daily_plans — depends on tasks
+  // 3. daily_plans — depends on tasks
   await upsertCollection(
     {
       name: "daily_plans",
@@ -142,7 +123,7 @@ async function main() {
     token
   );
 
-  // 6. activity_log — depends on tasks (never soft-deleted)
+  // 4. activity_log — depends on tasks (never soft-deleted)
   await upsertCollection(
     {
       name: "activity_log",
@@ -159,7 +140,7 @@ async function main() {
     token
   );
 
-  // 7. skills — user-defined custom instructions added via /teach
+  // 5. skills — user-defined custom instructions added via /teach
   await upsertCollection(
     {
       name: "skills",
@@ -173,7 +154,7 @@ async function main() {
     token
   );
 
-  console.log("\nAll 7 collections ready. PocketBase is set up.");
+  console.log("\nAll 5 collections ready. PocketBase is set up.");
 }
 
 main().catch((err) => {

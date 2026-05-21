@@ -30,13 +30,13 @@ const CORE_SYSTEM_PROMPT = `You are a personal productivity assistant embedded i
 ## Classification Rules (apply during /dump and /plan)
 
 Classify every item the user mentions as exactly one of:
-- **Task** — single, completable action (save with type="task")
-- **Project** — multi-step outcome (save with type="project", then list each step as a subtask via create_subtask)
+- **Task** — single, completable action (save with type_field="task")
+- **Project** — multi-step outcome (save with type_field="project" and a _temp_key, then list each step as a create_task with parent_id pointing to that key)
 - **Goal** — a longer-horizon aspiration (save via create_goal, type="short-term" or "long-term")
-- **Idea** — not actionable yet (save with type="idea", status="backlog")
-- **Recurring** — happens on a schedule (save with type="recurring", set recurrence + next_due)
+- **Idea** — not actionable yet (save with type_field="idea", status="backlog")
+- **Recurring** — happens on a schedule (save with type_field="recurring", set recurrence + next_due)
 
-For Projects, always emit one create_project action followed by create_subtask actions for each step.
+For Projects, always emit one create_task (type_field="project", _temp_key="p1") followed by create_task actions for each step (parent_id="p1", type_field="task").
 
 ## Commands
 
@@ -93,9 +93,9 @@ ALWAYS respond with valid JSON only. No markdown, no prose outside JSON.
   "reply": "the message to send to the user (markdown ok)",
   "actions": [
     { "type": "create_task", "title": "...", "status": "backlog", "type_field": "task", "impact": 7, "confidence": 8, "ease": 6, "due_date": "2026-05-20", "goal_id": "..." },
+    { "type": "create_task", "title": "Big project name", "type_field": "project", "_temp_key": "p1", "status": "backlog", "goal_id": "..." },
+    { "type": "create_task", "title": "Step 1", "type_field": "task", "parent_id": "p1", "order": 1 },
     { "type": "update_task", "id": "...", "status": "done" },
-    { "type": "create_project", "title": "...", "status": "backlog", "goal_id": "..." },
-    { "type": "create_subtask", "task_id": "...", "title": "...", "order": 1 },
     { "type": "create_goal", "title": "...", "type": "short-term", "status": "active", "measure": "...", "deadline": "2026-06-01" },
     { "type": "create_daily_plan", "task_id": "...", "date": "2026-05-16", "priority": 1 },
     { "type": "create_activity_log", "task_id": "...", "status": "completed", "note": "..." },
@@ -146,7 +146,7 @@ function advanceNextDue(current, recurrence) {
 }
 
 async function executeActions(actions) {
-  const projectIdMap = {};
+  const taskIdMap = {};
 
   for (const action of actions) {
     try {
@@ -158,10 +158,16 @@ async function executeActions(actions) {
             ? Math.round(((impact + confidence + ease) / 3) * 10) / 10
             : undefined);
 
-        await pb.tasks.create({
+        const parentId = action.parent_id
+          ? (taskIdMap[action.parent_id] ?? action.parent_id)
+          : undefined;
+
+        const task = await pb.tasks.create({
           title: action.title,
           type: action.type_field || "task",
           status: action.status || "backlog",
+          parent: parentId,
+          order: action.order,
           impact,
           confidence,
           ease,
@@ -172,28 +178,11 @@ async function executeActions(actions) {
           goal: action.goal_id,
         });
 
+        if (action._temp_key) taskIdMap[action._temp_key] = task.id;
+
       } else if (action.type === "update_task") {
         const { type: _t, id, ...fields } = action;
         await pb.tasks.update(id, fields);
-
-      } else if (action.type === "create_project") {
-        const project = await pb.projects.create({
-          title: action.title,
-          status: action.status || "backlog",
-          goal: action.goal_id,
-        });
-        if (action._temp_key) projectIdMap[action._temp_key] = project.id;
-
-      } else if (action.type === "create_subtask") {
-        const taskId = action.task_id in projectIdMap
-          ? projectIdMap[action.task_id]
-          : action.task_id;
-        await pb.subtasks.create({
-          task: taskId,
-          title: action.title,
-          order: action.order ?? 0,
-          status: action.status || "todo",
-        });
 
       } else if (action.type === "create_goal") {
         await pb.goals.create({
