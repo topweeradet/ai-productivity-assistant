@@ -88,7 +88,7 @@ function formatContextBlock(ctx) {
   };
 
   const tomorrow = addDays(ctx.today, 1);
-  const weekEnd  = addDays(ctx.today, 7);
+  const weekEnd  = addDays(ctx.today, 8);
 
   const allActive = [...ctx.todayTasks, ...ctx.backlog];
 
