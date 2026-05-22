@@ -49,6 +49,13 @@ async function buildContext() {
 function formatContextBlock(ctx) {
   const lines = [`Today is ${ctx.today}.`];
 
+  const projectById = Object.fromEntries(ctx.projects.map(p => [p.id, p.title]));
+  const parentTag = (t) => {
+    if (!t.parent) return "";
+    const title = projectById[t.parent];
+    return title ? ` 〈${title.slice(0, 10).trimEnd()}〉` : "";
+  };
+
   if (ctx.goals.length) {
     lines.push("\n## Active Goals");
     ctx.goals.forEach((g) => lines.push(`- [${g.id}] ${g.title} (${g.type})`));
@@ -65,19 +72,19 @@ function formatContextBlock(ctx) {
 
   if (ctx.todayTasks.length) {
     lines.push("\n## Today's Tasks");
-    ctx.todayTasks.forEach((t) => lines.push(`- [${t.id}] ${t.title} (ice: ${t.ice_score ?? "?"})`));
+    ctx.todayTasks.forEach((t) => lines.push(`- [${t.id}] ${t.title} (ice: ${t.ice_score ?? "?"})${parentTag(t)}`));
   }
 
   if (ctx.backlog.length) {
     lines.push("\n## Backlog (top by ICE score)");
     ctx.backlog.slice(0, 10).forEach((t) =>
-      lines.push(`- [${t.id}] ${t.title} (ice: ${t.ice_score ?? "?"})`)
+      lines.push(`- [${t.id}] ${t.title} (ice: ${t.ice_score ?? "?"})${parentTag(t)}`)
     );
   }
 
   if (ctx.upcoming.length) {
     lines.push("\n## Upcoming Deadlines");
-    ctx.upcoming.forEach((t) => lines.push(`- [${t.id}] ${t.title} due ${t.due_date}`));
+    ctx.upcoming.forEach((t) => lines.push(`- [${t.id}] ${t.title} due ${t.due_date}${parentTag(t)}`));
   }
 
   if (ctx.recurringDue.length) {
