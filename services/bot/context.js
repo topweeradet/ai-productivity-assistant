@@ -70,21 +70,65 @@ function formatContextBlock(ctx) {
     });
   }
 
-  if (ctx.todayTasks.length) {
-    lines.push("\n## Today's Tasks");
-    ctx.todayTasks.forEach((t) => lines.push(`- [${t.id}] ${t.title} (ice: ${t.ice_score ?? "?"})${parentTag(t)}`));
+  const formatDate = (iso) => {
+    const [, m, d] = iso.slice(0, 10).split("-");
+    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    return `${months[+m - 1]} ${+d}`;
+  };
+
+  const taskLine = (t, showDue = true) => {
+    const due = showDue && t.due_date ? ` — due ${formatDate(t.due_date)}` : "";
+    return `- [${t.id}] ${t.title} (ice: ${t.ice_score ?? "?"})${parentTag(t)}${due}`;
+  };
+
+  const addDays = (base, n) => {
+    const d = new Date(base);
+    d.setDate(d.getDate() + n);
+    return d.toISOString().split("T")[0];
+  };
+
+  const tomorrow = addDays(ctx.today, 1);
+  const weekEnd  = addDays(ctx.today, 7);
+
+  const allActive = [...ctx.todayTasks, ...ctx.backlog];
+
+  const todayBucket = allActive.filter(t =>
+    t.status === "today" ||
+    (t.due_date && t.due_date.slice(0, 10) === ctx.today)
+  );
+  const thisWeekBucket = allActive.filter(t =>
+    t.status !== "today" &&
+    t.due_date &&
+    t.due_date.slice(0, 10) >= tomorrow &&
+    t.due_date.slice(0, 10) <= weekEnd
+  );
+  const laterBucket = allActive.filter(t =>
+    t.status !== "today" &&
+    t.due_date &&
+    t.due_date.slice(0, 10) > weekEnd
+  );
+  const backlogBucket = allActive.filter(t =>
+    t.status !== "today" && !t.due_date
+  );
+
+  if (todayBucket.length) {
+    lines.push("\n## TODAY");
+    todayBucket.forEach(t => lines.push(taskLine(t)));
   }
 
-  if (ctx.backlog.length) {
-    lines.push("\n## Backlog (top by ICE score)");
-    ctx.backlog.slice(0, 10).forEach((t) =>
-      lines.push(`- [${t.id}] ${t.title} (ice: ${t.ice_score ?? "?"})${parentTag(t)}`)
-    );
+  if (thisWeekBucket.length) {
+    lines.push("\n## THIS WEEK");
+    thisWeekBucket.forEach(t => lines.push(taskLine(t)));
   }
 
-  if (ctx.upcoming.length) {
-    lines.push("\n## Upcoming Deadlines");
-    ctx.upcoming.forEach((t) => lines.push(`- [${t.id}] ${t.title} due ${t.due_date}${parentTag(t)}`));
+  if (laterBucket.length) {
+    lines.push("\n## LATER");
+    laterBucket.forEach(t => lines.push(taskLine(t)));
+  }
+
+  if (backlogBucket.length) {
+    lines.push("\n## BACKLOG (no date)");
+    backlogBucket.slice(0, 10).forEach(t => lines.push(taskLine(t, false)));
   }
 
   if (ctx.recurringDue.length) {
