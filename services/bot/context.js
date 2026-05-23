@@ -71,11 +71,14 @@ function formatContextBlock(ctx) {
   }
 
   const formatDate = (iso) => {
-    const [, m, d] = iso.slice(0, 10).split("-");
-    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-    const days = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-    const date = new Date(iso.slice(0, 10));
-    return `${days[date.getDay()]} ${months[+m - 1]} ${+d}`;
+    const date = new Date(`${iso.slice(0, 10)}T12:00:00Z`);
+    const formatter = new Intl.DateTimeFormat('en-AU', {
+      timeZone: 'Australia/Melbourne',
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    });
+    return formatter.format(date);
   };
 
   const taskLine = (t, showDue = true) => {
