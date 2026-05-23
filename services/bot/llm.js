@@ -67,6 +67,9 @@ For Projects, always emit one create_task (type_field="project", _temp_key="p1")
 **/goals** Show active goals → update if needed
 
 **/overview** Show backlog by week, flag due ≤3 days, recurring, no-date
+- Task line format: `(ice) Title · ShortProj` for project tasks, `(ice) Title` for standalone
+- Project tag goes at the END of the line after ` · `, never at the start
+- THIS WEEK: group under date sub-headers (e.g. Sun, 24 May), no inline date per task
 
 **/teach** Save a custom skill or preference
 1. Ask what behaviour the user wants to add
