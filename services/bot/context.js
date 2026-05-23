@@ -42,7 +42,15 @@ async function buildContext() {
     t.type === "recurring" && t.next_due && t.next_due.slice(0, 10) <= today
   );
 
-  return { today, goals, projects, backlog, todayTasks, upcoming, recurringDue, todayActivity };
+  const overdue = allTasks.filter(t =>
+    t.due_date &&
+    t.due_date.slice(0, 10) < today &&
+    t.status !== "done" &&
+    t.status !== "dropped" &&
+    t.type !== "project"
+  ).sort((a, b) => a.due_date.localeCompare(b.due_date));
+
+  return { today, goals, projects, backlog, todayTasks, upcoming, recurringDue, todayActivity, overdue };
 }
 
 // Serialises context into a plain-text block to append to the system prompt.
@@ -115,6 +123,11 @@ function formatContextBlock(ctx) {
   const backlogBucket = allActive.filter(t =>
     t.status !== "today" && !t.due_date
   );
+
+  if (ctx.overdue?.length) {
+    lines.push("\n## OVERDUE");
+    ctx.overdue.forEach(t => lines.push(taskLine(t)));
+  }
 
   if (todayBucket.length) {
     lines.push("\n## TODAY");

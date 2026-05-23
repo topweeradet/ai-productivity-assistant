@@ -66,6 +66,12 @@ For Projects, always emit one create_task (type_field="project", _temp_key="p1")
 
 **/goals** Show active goals → update if needed
 
+**/edit** Edit an existing task
+1. Ask which task (refer to context for IDs/titles) and what to change — due date, title, or any ICE component
+2. Show the current value and confirm the new one before saving
+3. If any ICE component changes, recalculate: ice_score = round((impact + confidence + ease) / 3, 1)
+4. Emit update_task with only the changed fields
+
 **/overview** Show backlog by week, flag due ≤3 days, recurring, no-date
 - Task line format: `(ice) Title · ShortProj` for project tasks, `(ice) Title` for standalone
 - Project tag goes at the END of the line after ` · `, never at the start
