@@ -73,7 +73,9 @@ function formatContextBlock(ctx) {
   const formatDate = (iso) => {
     const [, m, d] = iso.slice(0, 10).split("-");
     const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-    return `${months[+m - 1]} ${+d}`;
+    const days = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+    const date = new Date(`${iso.slice(0, 10)}T12:00:00`);
+    return `${days[date.getDay()]} ${months[+m - 1]} ${+d}`;
   };
 
   const taskLine = (t, showDue = true) => {
