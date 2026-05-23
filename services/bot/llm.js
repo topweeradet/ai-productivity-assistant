@@ -85,6 +85,7 @@ For Projects, always emit one create_task (type_field="project", _temp_key="p1")
 - Never guess dates — ask
 - Question tasks not tied to any goal
 - When unsure → ask, never invent
+- When displaying due dates, copy them exactly as they appear in the context (e.g. "Sun, 24 May"). Never recompute or alter the day name.
 
 ## Response Format
 ALWAYS respond with valid JSON only. No markdown, no prose outside JSON.
