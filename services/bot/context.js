@@ -47,7 +47,18 @@ async function buildContext() {
 
 // Serialises context into a plain-text block to append to the system prompt.
 function formatContextBlock(ctx) {
-  const lines = [`Today is ${ctx.today}.`];
+  const formatDate = (iso) => {
+    const date = new Date(`${iso.slice(0, 10)}T12:00:00Z`);
+    const formatter = new Intl.DateTimeFormat('en-AU', {
+      timeZone: 'Australia/Melbourne',
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    });
+    return formatter.format(date);
+  };
+
+  const lines = [`Today is ${formatDate(ctx.today)}, ${ctx.today}.`];
 
   const projectById = Object.fromEntries(ctx.projects.map(p => [p.id, p.title]));
   const parentTag = (t) => {
@@ -69,17 +80,6 @@ function formatContextBlock(ctx) {
       lines.push(`- [${p.id}] ${p.title} (${subtaskCount} subtask${subtaskCount !== 1 ? "s" : ""})`);
     });
   }
-
-  const formatDate = (iso) => {
-    const date = new Date(`${iso.slice(0, 10)}T12:00:00Z`);
-    const formatter = new Intl.DateTimeFormat('en-AU', {
-      timeZone: 'Australia/Melbourne',
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-    });
-    return formatter.format(date);
-  };
 
   const taskLine = (t, showDue = true) => {
     const due = showDue && t.due_date ? ` — due ${formatDate(t.due_date)}` : "";
