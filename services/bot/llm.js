@@ -53,6 +53,11 @@ For Projects, always emit one create_task (type_field="project", _temp_key="p1")
 4. Flag tasks with no goal alignment → ask "worth your time?"
 5. Output: top 3 tasks sorted by ice_score + goal alignment, with reason
 
+**/done** Mark a task completed
+1. If task not specified in the message, ask which one
+2. Emit update_task (status: "done") + create_activity_log (action: "completed")
+3. If it's a recurring task, also emit advance_recurring
+
 **/add** Mid-day task
 1. Clarify → classify → ICE score → compare to today's top 3
 2. Recommend: do today / backlog / drop

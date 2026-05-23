@@ -60,13 +60,15 @@ async function handleCommand(ctx, command, userText) {
 
 bot.command("start", (ctx) =>
   ctx.reply(
-    "Personal assistant ready.\n\nCommands:\n/dump — brain dump\n/plan — clarify & prioritise\n/add — add a task mid-day\n/recap — end of day review\n/goals — view & update goals\n/overview — 2-week big picture\n/teach — add a custom skill"
+    "Personal assistant ready.\n\nCommands:\n/dump — brain dump\n/plan — clarify & prioritise\n/add — add a task mid-day\n/done — mark a task completed\n/edit — edit a task's due date or ICE score\n/recap — end of day review\n/goals — view & update goals\n/overview — 2-week big picture\n/teach — add a custom skill"
   )
 );
 
 bot.command("dump", (ctx) => handleCommand(ctx, "/dump"));
 bot.command("plan", (ctx) => handleCommand(ctx, "/plan"));
 bot.command("add", (ctx) => handleCommand(ctx, "/add"));
+bot.command("done", (ctx) => handleCommand(ctx, "/done"));
+bot.command("edit", (ctx) => handleCommand(ctx, "/edit"));
 bot.command("recap", (ctx) => handleCommand(ctx, "/recap"));
 bot.command("goals", (ctx) => handleCommand(ctx, "/goals"));
 bot.command("overview", (ctx) => handleCommand(ctx, "/overview"));
@@ -88,7 +90,7 @@ bot.on("text", (ctx) => {
   if (command) {
     return handleCommand(ctx, command, ctx.message.text);
   }
-  return ctx.reply("Use a command to get started: /dump, /plan, /add, /recap, /goals, /overview, /teach");
+  return ctx.reply("Use a command to get started: /dump, /plan, /add, /done, /edit, /recap, /goals, /overview, /teach");
 });
 
 bot.launch({ dropPendingUpdates: true });
