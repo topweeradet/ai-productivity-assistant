@@ -64,7 +64,7 @@ function formatContextBlock(ctx) {
   const parentTag = (t) => {
     if (!t.parent) return "";
     const title = projectById[t.parent];
-    return title ? ` 〈${title.slice(0, 10).trimEnd()}〉` : "";
+    return title ? ` 〈${title}〉` : "";
   };
 
   if (ctx.goals.length) {
